@@ -1,0 +1,281 @@
+{
+  "name": "red-12-switches",
+  "devices": [
+    {
+      "id": "S1",
+      "kind": "switch",
+      "label": "SW1",
+      "position": {
+        "x": 700,
+        "y": 300
+      },
+      "status": "up"
+    },
+    {
+      "id": "S2",
+      "kind": "switch",
+      "label": "SW2",
+      "position": {
+        "x": 667,
+        "y": 425
+      },
+      "status": "up"
+    },
+    {
+      "id": "S3",
+      "kind": "switch",
+      "label": "SW3",
+      "position": {
+        "x": 575,
+        "y": 517
+      },
+      "status": "up"
+    },
+    {
+      "id": "S4",
+      "kind": "switch",
+      "label": "SW4",
+      "position": {
+        "x": 450,
+        "y": 550
+      },
+      "status": "up"
+    },
+    {
+      "id": "S5",
+      "kind": "switch",
+      "label": "SW5",
+      "position": {
+        "x": 325,
+        "y": 517
+      },
+      "status": "up"
+    },
+    {
+      "id": "S6",
+      "kind": "switch",
+      "label": "SW6",
+      "position": {
+        "x": 233,
+        "y": 425
+      },
+      "status": "up"
+    },
+    {
+      "id": "S7",
+      "kind": "switch",
+      "label": "SW7",
+      "position": {
+        "x": 200,
+        "y": 300
+      },
+      "status": "up"
+    },
+    {
+      "id": "S8",
+      "kind": "switch",
+      "label": "SW8",
+      "position": {
+        "x": 233,
+        "y": 175
+      },
+      "status": "up"
+    },
+    {
+      "id": "S9",
+      "kind": "switch",
+      "label": "SW9",
+      "position": {
+        "x": 325,
+        "y": 83
+      },
+      "status": "up"
+    },
+    {
+      "id": "S10",
+      "kind": "switch",
+      "label": "SW10",
+      "position": {
+        "x": 450,
+        "y": 50
+      },
+      "status": "up"
+    },
+    {
+      "id": "S11",
+      "kind": "switch",
+      "label": "SW11",
+      "position": {
+        "x": 575,
+        "y": 83
+      },
+      "status": "up"
+    },
+    {
+      "id": "S12",
+      "kind": "switch",
+      "label": "SW12",
+      "position": {
+        "x": 667,
+        "y": 175
+      },
+      "status": "up"
+    }
+  ],
+  "links": [
+    {
+      "id": "e1",
+      "source": "S1",
+      "target": "S2",
+      "cost": 8,
+      "status": "up"
+    },
+    {
+      "id": "e2",
+      "source": "S2",
+      "target": "S3",
+      "cost": 21,
+      "status": "up"
+    },
+    {
+      "id": "e3",
+      "source": "S3",
+      "target": "S4",
+      "cost": 33,
+      "status": "up"
+    },
+    {
+      "id": "e4",
+      "source": "S4",
+      "target": "S5",
+      "cost": 37,
+      "status": "up"
+    },
+    {
+      "id": "e5",
+      "source": "S5",
+      "target": "S6",
+      "cost": 7,
+      "status": "up"
+    },
+    {
+      "id": "e6",
+      "source": "S6",
+      "target": "S7",
+      "cost": 15,
+      "status": "up"
+    },
+    {
+      "id": "e7",
+      "source": "S7",
+      "target": "S8",
+      "cost": 27,
+      "status": "up"
+    },
+    {
+      "id": "e8",
+      "source": "S8",
+      "target": "S9",
+      "cost": 32,
+      "status": "up"
+    },
+    {
+      "id": "e9",
+      "source": "S9",
+      "target": "S10",
+      "cost": 25,
+      "status": "up"
+    },
+    {
+      "id": "e10",
+      "source": "S10",
+      "target": "S11",
+      "cost": 31,
+      "status": "up"
+    },
+    {
+      "id": "e11",
+      "source": "S11",
+      "target": "S12",
+      "cost": 19,
+      "status": "up"
+    },
+    {
+      "id": "e12",
+      "source": "S12",
+      "target": "S1",
+      "cost": 34,
+      "status": "up"
+    },
+    {
+      "id": "e13",
+      "source": "S1",
+      "target": "S6",
+      "cost": 39,
+      "status": "up"
+    },
+    {
+      "id": "e14",
+      "source": "S2",
+      "target": "S8",
+      "cost": 1,
+      "status": "up"
+    },
+    {
+      "id": "e15",
+      "source": "S3",
+      "target": "S10",
+      "cost": 20,
+      "status": "up"
+    },
+    {
+      "id": "e16",
+      "source": "S4",
+      "target": "S11",
+      "cost": 3,
+      "status": "up"
+    },
+    {
+      "id": "e17",
+      "source": "S5",
+      "target": "S9",
+      "cost": 4,
+      "status": "up"
+    },
+    {
+      "id": "e18",
+      "source": "S7",
+      "target": "S12",
+      "cost": 10,
+      "status": "up"
+    },
+    {
+      "id": "e19",
+      "source": "S1",
+      "target": "S4",
+      "cost": 23,
+      "status": "up"
+    },
+    {
+      "id": "e20",
+      "source": "S6",
+      "target": "S10",
+      "cost": 28,
+      "status": "up"
+    },
+    {
+      "id": "e21",
+      "source": "S3",
+      "target": "S7",
+      "cost": 26,
+      "status": "up"
+    },
+    {
+      "id": "e22",
+      "source": "S8",
+      "target": "S11",
+      "cost": 16,
+      "status": "up"
+    }
+  ]
+}

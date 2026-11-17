@@ -1,0 +1,85 @@
+{
+  "name": "red-desconectada",
+  "devices": [
+    {
+      "id": "S1",
+      "kind": "switch",
+      "label": "SW1",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "status": "up"
+    },
+    {
+      "id": "S2",
+      "kind": "switch",
+      "label": "SW2",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "status": "up"
+    },
+    {
+      "id": "S3",
+      "kind": "switch",
+      "label": "SW3",
+      "position": {
+        "x": 200,
+        "y": 250
+      },
+      "status": "up"
+    },
+    {
+      "id": "S4",
+      "kind": "switch",
+      "label": "SW4",
+      "position": {
+        "x": 600,
+        "y": 100
+      },
+      "status": "up"
+    },
+    {
+      "id": "S5",
+      "kind": "switch",
+      "label": "SW5",
+      "position": {
+        "x": 600,
+        "y": 250
+      },
+      "status": "up"
+    }
+  ],
+  "links": [
+    {
+      "id": "e1",
+      "source": "S1",
+      "target": "S2",
+      "cost": 4,
+      "status": "up"
+    },
+    {
+      "id": "e2",
+      "source": "S2",
+      "target": "S3",
+      "cost": 2,
+      "status": "up"
+    },
+    {
+      "id": "e3",
+      "source": "S1",
+      "target": "S3",
+      "cost": 6,
+      "status": "up"
+    },
+    {
+      "id": "e4",
+      "source": "S4",
+      "target": "S5",
+      "cost": 3,
+      "status": "up"
+    }
+  ]
+}

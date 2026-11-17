@@ -1,0 +1,63 @@
+{
+  "red-5-switches": {
+    "descripcion": "Red pequeña de 5 switches con ciclos (ejemplo resuelto a mano).",
+    "totalSwitches": 5,
+    "totalEnlaces": 7,
+    "componentesConectados": 1,
+    "estaConectada": true,
+    "enlacesEnArbol": 4,
+    "costoTotal": 13,
+    "idsEnlacesSeleccionados": [
+      "e1",
+      "e2",
+      "e4",
+      "e6"
+    ]
+  },
+  "red-12-switches": {
+    "descripcion": "Red mediana de 12 switches: anillo con enlaces redundantes y costos todos distintos.",
+    "totalSwitches": 12,
+    "totalEnlaces": 22,
+    "componentesConectados": 1,
+    "estaConectada": true,
+    "enlacesEnArbol": 11,
+    "costoTotal": 124,
+    "idsEnlacesSeleccionados": [
+      "e1",
+      "e2",
+      "e5",
+      "e6",
+      "e11",
+      "e14",
+      "e15",
+      "e16",
+      "e17",
+      "e18",
+      "e22"
+    ]
+  },
+  "red-con-empates": {
+    "descripcion": "Red de 6 switches con muchos costos repetidos: sirve para probar el desempate.",
+    "totalSwitches": 6,
+    "totalEnlaces": 10,
+    "componentesConectados": 1,
+    "estaConectada": true,
+    "enlacesEnArbol": 5,
+    "costoTotal": 19,
+    "idsEnlacesSeleccionados": null
+  },
+  "red-desconectada": {
+    "descripcion": "Dos islas sin conexión entre sí: Kruskal debe devolver un bosque, no un árbol.",
+    "totalSwitches": 5,
+    "totalEnlaces": 4,
+    "componentesConectados": 2,
+    "estaConectada": false,
+    "enlacesEnArbol": 3,
+    "costoTotal": 9,
+    "idsEnlacesSeleccionados": [
+      "e1",
+      "e2",
+      "e4"
+    ]
+  }
+}

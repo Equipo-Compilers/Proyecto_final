@@ -1,0 +1,106 @@
+{
+  "name": "red-5-switches",
+  "devices": [
+    {
+      "id": "A",
+      "kind": "switch",
+      "label": "A",
+      "position": {
+        "x": 100,
+        "y": 200
+      },
+      "status": "up"
+    },
+    {
+      "id": "B",
+      "kind": "switch",
+      "label": "B",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "status": "up"
+    },
+    {
+      "id": "C",
+      "kind": "switch",
+      "label": "C",
+      "position": {
+        "x": 300,
+        "y": 300
+      },
+      "status": "up"
+    },
+    {
+      "id": "D",
+      "kind": "switch",
+      "label": "D",
+      "position": {
+        "x": 500,
+        "y": 200
+      },
+      "status": "up"
+    },
+    {
+      "id": "E",
+      "kind": "switch",
+      "label": "E",
+      "position": {
+        "x": 700,
+        "y": 200
+      },
+      "status": "up"
+    }
+  ],
+  "links": [
+    {
+      "id": "e1",
+      "source": "A",
+      "target": "B",
+      "cost": 1,
+      "status": "up"
+    },
+    {
+      "id": "e2",
+      "source": "B",
+      "target": "C",
+      "cost": 2,
+      "status": "up"
+    },
+    {
+      "id": "e3",
+      "source": "A",
+      "target": "C",
+      "cost": 3,
+      "status": "up"
+    },
+    {
+      "id": "e4",
+      "source": "C",
+      "target": "D",
+      "cost": 4,
+      "status": "up"
+    },
+    {
+      "id": "e5",
+      "source": "B",
+      "target": "D",
+      "cost": 5,
+      "status": "up"
+    },
+    {
+      "id": "e6",
+      "source": "D",
+      "target": "E",
+      "cost": 6,
+      "status": "up"
+    },
+    {
+      "id": "e7",
+      "source": "C",
+      "target": "E",
+      "cost": 7,
+      "status": "up"
+    }
+  ]
+}
