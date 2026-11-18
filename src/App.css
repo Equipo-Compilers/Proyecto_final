@@ -1,0 +1,95 @@
+
+:root {
+
+  --polar-white: #d5d9dd;      /* Blanco frío limpio para fondos principales */
+  --snow-storm: #eceff4;       /* Gris muy claro para tarjetas/hero */
+  --frost-ice: #e5e9f0;        /* Bordes suaves y divisores */
+  --pure-white: #ffffff;       /* Contenedores elevados (Workspace) */
+
+ 
+  --polar-night: #2e3440;      /* Texto principal (alto contraste sin cansar la vista) */
+  --slate-gray: #4c566a;       /* Texto secundario / subtítulos */
+  --muted-steel: #64748b;      /* Texto discreto (footer, etiquetas) */
+
+  
+  --arctic-blue: #0284c7;      /* Color primario (enlaces, títulos activos, nodos) */
+  --frost-cyan: #38bdf8;       /* Acento secundario / hover */
+  --signal-green: #10b981;     /* Estado activo / paquete enviado OK */
+}
+
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+}
+header {
+position: sticky;
+top: 0;
+z-index: 100;
+color: var(--polar-night);
+background-color: var(--polar-white);
+width: 100%;
+height: 3%;
+border:var(--arctic-blue) solid 2px;
+}
+
+.logo {
+  font-size: 30px;
+  font-weight: bold;
+  color: var(--arctic-blue);
+}
+.contenedorPrincipal {
+background-color: var(--polar-white);
+display: flex;
+flex-direction: row;
+}
+.contenido{
+  color: var(--polar-night);
+  font-size: 100px;
+  
+}
+ 
+.contenedorSecundario {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60%;
+  background-color: var(--polar-white);
+  border: var(--arctic-blue) solid 1px;
+}
+.contenedorMapa{
+   height: auto;
+}
+.tarjeta {
+background-color: var(--snow-storm);
+border: 1px solid var(--arctic-blue);
+border-radius: 8px;
+padding: 10%;
+width: 50%;
+max-width: 50%;
+display: flex;
+flex-direction: column;
+justify-content: center;
+align-items: center;
+gap: 10%;
+margin: 1.2%;
+box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+transition: transform 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease;
+ 
+}
+.tarjeta:hover {
+  transform: translateY(-4px);
+  background-color: var(--pure-white);
+  box-shadow: 0 10px 24px var(--slate-gray);
+  cursor: pointer;
+}
+
+.mapaIframe {
+  width: 100%;
+  height: 400px;
+  border: 2px solid var(--arctic-blue);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(46, 52, 64, 0.12);
+}
