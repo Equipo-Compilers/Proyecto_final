@@ -9,17 +9,36 @@ Integrantes:
 Este proyecto es una página web que permita la creacion de redes de internet tanto LAN como de mayor nivel esto incluyendo los comandos para la configuración optima de los equipos de computo que esten conectados ademas de la configuracion optima de la red del distribuidor de servicios.
 
 # Objetivos
+Objetivo general
+Desarrollar un simulador web interactivo para la representación de topologías de redes Ethernet redundantes, utilizando los algoritmos de Prim y Kruskal para la eliminación de bucles de Capa 2 y la generación de árboles de expansión mínima, con el fin de analizar comparativamente su costo total, conectividad y tiempo de ejecución.
 
+Objetivos particulares
+- Objetivo Particular 1: Análisis teórico y modelado
+Analizar el comportamiento matemático de los algoritmos de Prim y Kruskal aplicados a la teoría de grafos, así como las características de las redes Ethernet redundantes, para establecer los parámetros de prevención de bucles de Capa 2.
+- Objetivo Particular 2: Diseño de interfaz y estructuras de datos
+Diseñar la interfaz gráfica del simulador web para que sea interactiva, y definir las estructuras de datos que representarán los switches como nodos y los enlaces redundantes como aristas con sus respectivos costos.
+- Objetivo Particular 3: Implementación algorítmica
+Implementar la lógica computacional en el entorno web, programando los algoritmos de Prim y Kruskal para que procesen las topologías diseñadas por el usuario y visualicen gráficamente la eliminación de ciclos.
+- Objetivo Particular 4: Evaluación y comparación de rendimiento
+Evaluar el rendimiento de ambos algoritmos dentro del simulador ejecutando distintos escenarios de prueba para medir y comparar el costo total de la topología resultante, la conservación de la conectividad y el tiempo de ejecución.
 
 # Algoritmos implementados
-
+Los algoritmos implementados en la siguiente sección serán los algoritmos de:
+- Prim
+- Kruskal
+- Dijkstra
+- Bellman-ford
+- STP simulado
 
 # Tecnologias utilizadas 
 - Node js (Para crear el proyecto de Vite)
 - Vite
 - React
+- React flow
+- Vitest
 - Typescript
-- Css
+- Tailwind CSS
+- JSON
 - Vercel
 
 # Formato de carpetas en el GitHub
