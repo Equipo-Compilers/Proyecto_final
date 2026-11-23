@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 
 import {
@@ -9,7 +8,8 @@ import {
 
 import type { PrimInput } from "./core/model/primModel";
 
-// Grafo de ejemplo
+import { SidePanel } from "./ui/panels/SidePanel";
+
 const graph: PrimInput["graph"] = {
   nodes: [
     { id: "A", label: "A" },
@@ -44,7 +44,6 @@ function App() {
   const currentStep = simulation.currentStep;
   const visitedNodes = currentStep?.visitedNodes ?? [];
 
-  // Mostrar únicamente las aristas correspondientes a los pasos realizados
   const selectedEdges = simulation.result.mstEdges.slice(
     0,
     simulation.currentStepIndex + 1
@@ -52,7 +51,6 @@ function App() {
 
   const totalCost = currentStep?.totalCost ?? 0;
 
-  // Iniciar simulación
   const handleStart = () => {
     setSimulation(
       createPrimSimulation({
@@ -63,15 +61,13 @@ function App() {
 
     setStarted(true);
   };
-
-  // Avanzar un paso
+  
   const handleNext = () => {
     if (!started || simulation.isFinished) return;
 
     setSimulation((previous) => nextPrimStep(previous));
   };
 
-  // Reiniciar simulación
   const handleReset = () => {
     setSimulation(
       resetPrimSimulation(
@@ -85,7 +81,6 @@ function App() {
     setStarted(false);
   };
 
-  // Cambiar nodo inicial
   const handleStartNodeChange = (node: string) => {
     setStartNode(node);
 
@@ -101,9 +96,9 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 p-6 text-white">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto flex max-w-7xl flex-col gap-6 xl:flex-row">
+        <div className="min-w-0 flex-1">
 
-        {/* Encabezado */}
         <header className="mb-8">
           <h1 className="text-3xl font-bold text-cyan-400">
             Simulador de redes
@@ -114,7 +109,6 @@ function App() {
           </p>
         </header>
 
-        {/* Tarjetas de algoritmos */}
         <div className="mb-8 grid gap-4 sm:grid-cols-3">
           <div className="rounded-xl border border-emerald-700 bg-slate-900 p-4">
             <h2 className="font-semibold text-emerald-400">Prim</h2>
@@ -138,7 +132,6 @@ function App() {
           </div>
         </div>
 
-        {/* Simulación de Prim */}
         <section className="rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-xl">
 
           <h2 className="mb-2 text-2xl font-bold text-emerald-400">
@@ -149,7 +142,6 @@ function App() {
             Construye un árbol de expansión mínima paso a paso.
           </p>
 
-          {/* Controles */}
           <div className="mb-6 flex flex-wrap items-end gap-4">
 
             <div>
@@ -199,7 +191,6 @@ function App() {
             </button>
           </div>
 
-          {/* Indicadores */}
           <div className="mb-8 grid gap-4 sm:grid-cols-3">
             <div className="rounded-xl bg-slate-800 p-4">
               <p className="text-sm text-slate-400">Nodo inicial</p>
@@ -225,7 +216,6 @@ function App() {
             </div>
           </div>
 
-          {/* Nodos */}
           <div className="mb-8">
             <h3 className="mb-4 font-semibold text-slate-200">
               Nodos del grafo
@@ -254,7 +244,6 @@ function App() {
             </div>
           </div>
 
-          {/* Paso actual */}
           <div className="mb-8 rounded-xl border border-slate-700 bg-slate-800/70 p-5">
             <h3 className="mb-3 font-semibold text-cyan-400">
               Paso actual
@@ -298,7 +287,6 @@ function App() {
             )}
           </div>
 
-          {/* Aristas seleccionadas */}
           <div className="mb-8">
             <h3 className="mb-4 font-semibold text-slate-200">
               Aristas seleccionadas para el árbol
@@ -330,7 +318,6 @@ function App() {
             </div>
           </div>
 
-          {/* Aristas candidatas */}
           <div className="mb-8">
             <h3 className="mb-4 font-semibold text-slate-200">
               Aristas candidatas
@@ -366,7 +353,6 @@ function App() {
             </div>
           </div>
 
-          {/* Resultado final */}
           {started && simulation.isFinished && (
             <div className="rounded-xl border border-emerald-600 bg-emerald-950/30 p-5">
               <h3 className="mb-2 text-xl font-bold text-emerald-400">
@@ -387,6 +373,9 @@ function App() {
             </div>
           )}
         </section>
+        </div>
+
+        <SidePanel />
       </div>
     </div>
   );
