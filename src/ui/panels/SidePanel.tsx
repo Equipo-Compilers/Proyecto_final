@@ -5,7 +5,7 @@ import { ResultsPanel } from "../results/ResultsPanel";
 
 export function SidePanel() {
   return (
-    <aside className="flex w-full flex-col gap-4 lg:w-md">
+    <aside className="flex w-full flex-col gap-4">
       <DataToolbar />
       <AlgorithmSelector />
       <ResultsPanel />
