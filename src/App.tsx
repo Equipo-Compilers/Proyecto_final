@@ -22,7 +22,7 @@ function App() {
           <NetworkEditor />
         </div>
 
-        <div className="w-full shrink-0 lg:w-[390px] xl:w-[420px]">
+        <div className="w-full shrink-0 lg:sticky lg:top-5 lg:max-h-[calc(100vh-7rem)] lg:w-97.5 lg:overflow-y-auto lg:scrollbar-none lg:[&::-webkit-scrollbar]:hidden xl:w-105">
           <SidePanel />
         </div>
       </main>

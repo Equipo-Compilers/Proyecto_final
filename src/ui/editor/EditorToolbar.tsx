@@ -1,5 +1,5 @@
 import type { ChangeEvent } from "react";
-import { EXAMPLE_NETWORKS } from "../../data/examples";
+import { getExamplesForMode } from "../../data/examples";
 import { useNetworkStore } from "../../store/networkStore";
 
 interface EditorToolbarProps {
@@ -16,6 +16,7 @@ export function EditorToolbar({
   const addDevice = useNetworkStore((s) => s.addDevice);
   const clearNetwork = useNetworkStore((s) => s.clearNetwork);
   const setNetwork = useNetworkStore((s) => s.setNetwork);
+  const mode = useNetworkStore((s) => s.analysisMode);
   const lastError = useNetworkStore((s) => s.lastError);
   const clearError = useNetworkStore((s) => s.clearError);
 
@@ -26,8 +27,15 @@ export function EditorToolbar({
     addDevice({ kind: "switch" });
   };
 
+  const handleAddRouter = () => {
+    clearError();
+    addDevice({ kind: "router" });
+  };
+
+  const examples = getExamplesForMode(mode);
+
   const handleExampleChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    const example = EXAMPLE_NETWORKS.find((item) => item.id === e.target.value);
+    const example = examples.find((item) => item.id === e.target.value);
     if (example) {
       setNetwork(example.network);
     }
@@ -37,13 +45,21 @@ export function EditorToolbar({
   return (
     <div className="flex flex-col gap-2.5 rounded-t-2xl border-b border-slate-700 bg-slate-900/95 p-3 sm:gap-3 sm:p-4">
       <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
-        <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:items-center">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
           <button
             type="button"
             onClick={handleAddSwitch}
             className="rounded-lg bg-cyan-500 px-2.5 py-2 text-xs font-semibold text-slate-950 shadow transition hover:bg-cyan-400 active:scale-95 sm:px-3.5 sm:text-sm"
           >
             + Switch
+          </button>
+
+          <button
+            type="button"
+            onClick={handleAddRouter}
+            className="rounded-lg bg-violet-500 px-2.5 py-2 text-xs font-semibold text-slate-950 shadow transition hover:bg-violet-400 active:scale-95 sm:px-3.5 sm:text-sm"
+          >
+            + Router
           </button>
 
           <button
@@ -80,7 +96,7 @@ export function EditorToolbar({
             <option value="" disabled>
               Seleccionar topología…
             </option>
-            {EXAMPLE_NETWORKS.map((example) => (
+            {examples.map((example) => (
               <option key={example.id} value={example.id}>
                 {example.label}
               </option>
@@ -97,12 +113,18 @@ export function EditorToolbar({
           </span>
           <span className="flex items-center gap-1.5 text-emerald-400">
             <span className="inline-block h-2 w-4 rounded bg-emerald-500 sm:h-2.5 sm:w-5" />
-            Activo (MST)
+            {mode === "layer3" ? "Árbol de rutas" : "Activo (MST)"}
           </span>
           <span className="flex items-center gap-1.5 text-rose-400">
             <span className="inline-block h-2 w-4 rounded border border-dashed border-rose-500 bg-rose-950 sm:h-2.5 sm:w-5" />
             Descartado
           </span>
+          {mode === "layer3" && (
+            <span className="flex items-center gap-1.5 text-amber-300">
+              <span className="inline-block h-2 w-4 rounded bg-amber-500 sm:h-2.5 sm:w-5" />
+              Camino elegido
+            </span>
+          )}
         </div>
 
         <span className="hidden md:inline">

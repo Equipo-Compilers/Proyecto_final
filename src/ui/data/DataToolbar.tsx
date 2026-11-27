@@ -1,13 +1,11 @@
 import { useState, type ChangeEvent } from "react";
-import dagre from "@dagrejs/dagre";
 
 import { exportNetworkJson, parseNetworkJson } from "../../core/io/networkJson";
 import { generateRandomNetwork, MAX_RANDOM_SWITCHES } from "../../core/generator/randomNetwork";
-import type { Network } from "../../core/model/network";
+import { getExamplesForMode } from "../../data/examples";
 import { useNetworkStore } from "../../store/networkStore";
 
 type Message = { kind: "ok" | "error"; text: string } | null;
-type ShapeKind = "grid" | "ring" | "star" | "tree";
 
 function downloadText(fileName: string, text: string) {
   const blob = new Blob([text], { type: "application/json" });
@@ -19,128 +17,20 @@ function downloadText(fileName: string, text: string) {
   URL.revokeObjectURL(url);
 }
 
-function formatNetworkShape(net: Network, shape: ShapeKind): Network {
-  const devices = net.devices;
-  const count = devices.length;
-  if (count === 0) return net;
-
-  if (shape === "grid") {
-    const cols = Math.ceil(Math.sqrt(count));
-    return {
-      ...net,
-      devices: devices.map((device, idx) => ({
-        ...device,
-        position: {
-          x: 100 + (idx % cols) * 210,
-          y: 90 + Math.floor(idx / cols) * 165,
-        },
-      })),
-    };
-  }
-
-  if (shape === "ring") {
-    const radius = Math.max(170, count * 38);
-    const centerX = radius + 120;
-    const centerY = radius + 90;
-
-    return {
-      ...net,
-      devices: devices.map((device, idx) => {
-        const angle = (2 * Math.PI * idx) / count - Math.PI / 2;
-        return {
-          ...device,
-          position: {
-            x: Math.round(centerX + radius * Math.cos(angle)),
-            y: Math.round(centerY + radius * Math.sin(angle)),
-          },
-        };
-      }),
-    };
-  }
-
-  if (shape === "star") {
-    if (count === 1) {
-      return {
-        ...net,
-        devices: [{ ...devices[0], position: { x: 300, y: 220 } }],
-      };
-    }
-
-    const degree = new Map<string, number>();
-    for (const d of devices) degree.set(d.id, 0);
-    for (const l of net.links) {
-      degree.set(l.source, (degree.get(l.source) ?? 0) + 1);
-      degree.set(l.target, (degree.get(l.target) ?? 0) + 1);
-    }
-
-    const sorted = [...devices].sort(
-      (a, b) => (degree.get(b.id) ?? 0) - (degree.get(a.id) ?? 0)
-    );
-    const [hub, ...spokes] = sorted;
-    const radius = Math.max(180, spokes.length * 40);
-    const centerX = radius + 120;
-    const centerY = radius + 90;
-
-    const positions = new Map<string, { x: number; y: number }>();
-    positions.set(hub.id, { x: centerX, y: centerY });
-    spokes.forEach((device, idx) => {
-      const angle = (2 * Math.PI * idx) / spokes.length - Math.PI / 2;
-      positions.set(device.id, {
-        x: Math.round(centerX + radius * Math.cos(angle)),
-        y: Math.round(centerY + radius * Math.sin(angle)),
-      });
-    });
-
-    return {
-      ...net,
-      devices: devices.map((d) => ({
-        ...d,
-        position: positions.get(d.id) ?? d.position,
-      })),
-    };
-  }
-
-  // shape === "tree"
-  const g = new dagre.graphlib.Graph();
-  g.setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: "TB", nodesep: 70, ranksep: 100 });
-
-  for (const d of devices) {
-    g.setNode(d.id, { width: 130, height: 80 });
-  }
-  for (const l of net.links) {
-    g.setEdge(l.source, l.target);
-  }
-  dagre.layout(g);
-
-  return {
-    ...net,
-    devices: devices.map((d) => {
-      const pos = g.node(d.id);
-      return pos
-        ? {
-            ...d,
-            position: {
-              x: Math.round(pos.x - 65 + 100),
-              y: Math.round(pos.y - 40 + 80),
-            },
-          }
-        : d;
-    }),
-  };
-}
-
 const buttonClass =
   "rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200 transition hover:bg-slate-700 active:scale-95";
 
 export function DataToolbar() {
   const network = useNetworkStore((s) => s.network);
+  const mode = useNetworkStore((s) => s.analysisMode);
   const setNetwork = useNetworkStore((s) => s.setNetwork);
   const clearNetwork = useNetworkStore((s) => s.clearNetwork);
 
+  const examples = getExamplesForMode(mode);
+  const deviceName = mode === "layer3" ? "routers" : "switches";
+
   const [message, setMessage] = useState<Message>(null);
   const [randomSize, setRandomSize] = useState(8);
-  const [randomShape, setRandomShape] = useState<ShapeKind>("grid");
 
   const onExport = () => {
     const safeName = network.name.replace(/[^a-zA-Z0-9-_]+/g, "_") || "red";
@@ -163,18 +53,27 @@ export function DataToolbar() {
     } catch {
       setMessage({ kind: "error", text: "No se pudo leer el archivo." });
     }
-    input.value = "";
+    input.value = ""; // permite volver a elegir el mismo archivo
+  };
+
+  const onExample = (e: ChangeEvent<HTMLSelectElement>) => {
+    const example = examples.find((x) => x.id === e.target.value);
+    if (example) {
+      setNetwork(example.network);
+      setMessage({ kind: "ok", text: `Ejemplo «${example.label}» cargado.` });
+    }
+    e.target.value = "";
   };
 
   const onRandom = () => {
     try {
       const generated = generateRandomNetwork({
         switches: randomSize,
+        kind: mode === "layer3" ? "router" : "switch",
         seed: Math.floor(Math.random() * 1_000_000),
       });
-      const shaped = formatNetworkShape(generated, randomShape);
-      setNetwork(shaped);
-      setMessage({ kind: "ok", text: `Red aleatoria de ${randomSize} switches generada.` });
+      setNetwork(generated);
+      setMessage({ kind: "ok", text: `Red aleatoria de ${randomSize} ${deviceName} generada.` });
     } catch (error) {
       setMessage({
         kind: "error",
@@ -199,33 +98,33 @@ export function DataToolbar() {
         {network.name}: {network.devices.length} dispositivos, {network.links.length} enlaces
       </p>
 
-      <label className="mb-1 block text-sm text-slate-300" htmlFor="random-shape-select">
-        Forma de red aleatoria
+      <label className="mb-1 block text-sm text-slate-300" htmlFor="example-select">
+        Cargar ejemplo
       </label>
       <select
-        id="random-shape-select"
-        value={randomShape}
-        onChange={(e) => setRandomShape(e.target.value as ShapeKind)}
+        id="example-select"
+        defaultValue=""
+        onChange={onExample}
         className="mb-3 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-white focus:border-cyan-400 focus:outline-none"
       >
-        <option value="grid">Cuadrícula ordenada (Por defecto)</option>
-        <option value="ring">Anillo (Círculo)</option>
-        <option value="star">Estrella (Hub central)</option>
-        <option value="tree">Árbol jerárquico</option>
+        <option value="" disabled>
+          Elige una red…
+        </option>
+        {examples.map((example) => (
+          <option key={example.id} value={example.id}>
+            {example.label}
+          </option>
+        ))}
       </select>
 
-      <label className="mb-1 block text-sm text-slate-300" htmlFor="random-switches-input">
-        Cantidad de switches (1–{MAX_RANDOM_SWITCHES})
-      </label>
       <div className="mb-3 flex items-center gap-2">
         <input
-          id="random-switches-input"
           type="number"
           min={1}
           max={MAX_RANDOM_SWITCHES}
-          value={randomSize === 0 ? "" : randomSize}
+          value={randomSize}
           onChange={onRandomSizeChange}
-          aria-label="Cantidad de switches de la red aleatoria"
+          aria-label={`Cantidad de ${deviceName} de la red aleatoria`}
           className="w-20 rounded-lg border border-slate-600 bg-slate-900 px-2 py-2 text-white focus:border-cyan-400 focus:outline-none"
         />
         <button type="button" onClick={onRandom} className={buttonClass}>

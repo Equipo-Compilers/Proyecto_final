@@ -1,6 +1,6 @@
-import { ALGORITHM_LIST } from "../algorithms/registry";
+import { ALGORITHM_LIST, getAlgorithmsForMode } from "../algorithms/registry";
 import type { AlgorithmId } from "../model/algorithmResult";
-import type { Network } from "../model/network";
+import type { DeviceKind, Network } from "../model/network";
 import { generateRandomNetwork } from "../generator/randomNetwork";
 
 export interface BenchmarkRow {
@@ -12,6 +12,7 @@ export interface BenchmarkRow {
   minMs: number;
   totalCost: number;
   selectedLinks: number;
+  distanceSum?: number;
   samples: number;
 }
 
@@ -22,6 +23,7 @@ export interface BenchmarkOptions {
   seed?: number;
   algorithms?: AlgorithmId[];
   startNodeId?: string;
+  kind?: DeviceKind;
 }
 
 export type Clock = () => number;
@@ -33,7 +35,7 @@ const MAX_INNER_LOOPS = 2000;
 export function benchmarkNetwork(
   network: Network,
   repetitions = 10,
-  algorithms: AlgorithmId[] = ALGORITHM_LIST.map((a) => a.id),
+  algorithms: AlgorithmId[] = getAlgorithmsForMode("layer2").map((a) => a.id),
   now: Clock = defaultClock,
   startNodeId?: string
 ): BenchmarkRow[] {
@@ -73,6 +75,7 @@ export function benchmarkNetwork(
       minMs: min,
       totalCost: output.totalCost,
       selectedLinks: output.selectedLinks,
+      ...(output.distanceSum === undefined ? {} : { distanceSum: output.distanceSum }),
       samples,
     });
   }
@@ -90,6 +93,7 @@ export function runBenchmark(
     extraLinksPerSwitch = 3,
     seed = 2026,
     algorithms,
+    kind,
   } = options;
 
   const rows: BenchmarkRow[] = [];
@@ -98,6 +102,7 @@ export function runBenchmark(
       switches: size,
       extraLinks: size * extraLinksPerSwitch,
       seed: seed + size,
+      ...(kind === undefined ? {} : { kind }),
     });
     rows.push(...benchmarkNetwork(network, repetitions, algorithms, now));
     onProgress?.(index + 1, sizes.length);

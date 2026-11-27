@@ -13,9 +13,11 @@ export function getLinkStates(
   if (!result) return states;
 
   if (stepIndex === null || result.steps.length === 0) {
+    const discarded = new Set(result.discardedLinkIds);
     const selected = new Set(result.selectedLinkIds);
     for (const id of states.keys()) {
-      states.set(id, selected.has(id) ? "selected" : "discarded");
+      if (selected.has(id)) states.set(id, "selected");
+      else if (discarded.has(id)) states.set(id, "discarded");
     }
     return states;
   }
@@ -26,6 +28,12 @@ export function getLinkStates(
     if (states.has(step.linkId)) {
       states.set(step.linkId, step.decision === "accepted" ? "selected" : "discarded");
     }
+  }
+  
+  if (last < 0) return states;
+  const accepted = new Set(result.steps[last].acceptedLinkIds);
+  for (const [id, state] of states) {
+    if (state === "selected" && !accepted.has(id)) states.set(id, "neutral");
   }
   return states;
 }

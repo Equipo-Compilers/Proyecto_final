@@ -109,4 +109,20 @@ describe("generateRandomNetwork", () => {
       }
     }
   });
+
+  it("puede generar routers (ids R1, R2... y nombre con «routers»)", () => {
+    const net = generateRandomNetwork({ switches: 6, kind: "router", seed: 3 });
+    expect(net.devices.every((d) => d.kind === "router")).toBe(true);
+    expect(net.devices.map((d) => d.id)).toEqual(["R1", "R2", "R3", "R4", "R5", "R6"]);
+    expect(net.devices[0].label).toBe("R1");
+    expect(net.name).toContain("routers");
+    expect(countComponents(net)).toBe(1);
+    expect(validateNetwork(net)).toEqual([]);
+  });
+
+  it("por defecto sigue generando switches S1, S2... con nombre SW1", () => {
+    const net = generateRandomNetwork({ switches: 3, seed: 1 });
+    expect(net.devices.map((d) => d.id)).toEqual(["S1", "S2", "S3"]);
+    expect(net.devices[0].label).toBe("SW1");
+  });
 });

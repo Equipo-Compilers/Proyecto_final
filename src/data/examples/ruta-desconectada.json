@@ -1,0 +1,85 @@
+{
+  "name": "ruta-desconectada",
+  "devices": [
+    {
+      "id": "R1",
+      "kind": "router",
+      "label": "R1",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "status": "up"
+    },
+    {
+      "id": "R2",
+      "kind": "router",
+      "label": "R2",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "status": "up"
+    },
+    {
+      "id": "R3",
+      "kind": "router",
+      "label": "R3",
+      "position": {
+        "x": 200,
+        "y": 250
+      },
+      "status": "up"
+    },
+    {
+      "id": "R4",
+      "kind": "router",
+      "label": "R4",
+      "position": {
+        "x": 600,
+        "y": 100
+      },
+      "status": "up"
+    },
+    {
+      "id": "R5",
+      "kind": "router",
+      "label": "R5",
+      "position": {
+        "x": 600,
+        "y": 250
+      },
+      "status": "up"
+    }
+  ],
+  "links": [
+    {
+      "id": "e1",
+      "source": "R1",
+      "target": "R2",
+      "cost": 4,
+      "status": "up"
+    },
+    {
+      "id": "e2",
+      "source": "R2",
+      "target": "R3",
+      "cost": 2,
+      "status": "up"
+    },
+    {
+      "id": "e3",
+      "source": "R1",
+      "target": "R3",
+      "cost": 9,
+      "status": "up"
+    },
+    {
+      "id": "e4",
+      "source": "R4",
+      "target": "R5",
+      "cost": 3,
+      "status": "up"
+    }
+  ]
+}

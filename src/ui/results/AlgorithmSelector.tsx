@@ -1,10 +1,13 @@
-import type { ChangeEvent } from "react";
-import { ALGORITHM_LIST, ALGORITHMS } from "../../core/algorithms/registry";
+import { useMemo, type ChangeEvent } from "react";
+
+import { ALGORITHMS, getAlgorithmsForMode } from "../../core/algorithms/registry";
 import type { AlgorithmId } from "../../core/model/algorithmResult";
+import { networkForLayer } from "../../core/utils/layers";
 import { useNetworkStore } from "../../store/networkStore";
 
 export function AlgorithmSelector() {
-  const devices = useNetworkStore((s) => s.network.devices);
+  const network = useNetworkStore((s) => s.network);
+  const mode = useNetworkStore((s) => s.analysisMode);
   const selectedId = useNetworkStore((s) => s.selectedAlgorithmId);
   const startNodeId = useNetworkStore((s) => s.startNodeId);
   const hasResult = useNetworkStore((s) => s.result !== null);
@@ -16,7 +19,12 @@ export function AlgorithmSelector() {
   const clearResult = useNetworkStore((s) => s.clearResult);
 
   const selected = ALGORITHMS[selectedId];
-  const isEmpty = devices.length === 0;
+  const algorithms = getAlgorithmsForMode(mode);
+  const participants = useMemo(
+    () => networkForLayer(network, selected.layer).devices,
+    [network, selected.layer]
+  );
+  const isEmpty = participants.length === 0;
 
   const onAlgorithmChange = (e: ChangeEvent<HTMLSelectElement>) => {
     selectAlgorithm(e.target.value as AlgorithmId);
@@ -39,7 +47,7 @@ export function AlgorithmSelector() {
         onChange={onAlgorithmChange}
         className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-white focus:border-cyan-400 focus:outline-none"
       >
-        {ALGORITHM_LIST.map((algorithm) => (
+        {algorithms.map((algorithm) => (
           <option key={algorithm.id} value={algorithm.id}>
             {algorithm.name}
           </option>
@@ -54,7 +62,7 @@ export function AlgorithmSelector() {
       {selected.needsStartNode && (
         <div className="mt-3">
           <label className="mb-1 block text-sm text-slate-300" htmlFor="start-node-select">
-            Switch inicial
+            {selected.startNodeLabel}
           </label>
           <select
             id="start-node-select"
@@ -64,7 +72,7 @@ export function AlgorithmSelector() {
             className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-white focus:border-cyan-400 focus:outline-none disabled:opacity-50"
           >
             <option value="">Automático (el primero)</option>
-            {devices.map((device) => (
+            {participants.map((device) => (
               <option key={device.id} value={device.id}>
                 {device.label}
               </option>
@@ -95,7 +103,9 @@ export function AlgorithmSelector() {
 
       {isEmpty && (
         <p className="mt-3 text-sm text-amber-300">
-          Agrega al menos un switch (o carga una red de ejemplo) para poder ejecutar.
+          {mode === "layer3"
+            ? "En capa 3 solo participan los routers. Agrega al menos un router (o carga un ejemplo de capa 3) para poder ejecutar."
+            : "Agrega al menos un switch (o carga una red de ejemplo) para poder ejecutar."}
         </p>
       )}
       {lastError && (

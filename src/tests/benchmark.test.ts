@@ -2,15 +2,16 @@ import { describe, it, expect } from "vitest";
 
 import { benchmarkNetwork, runBenchmark } from "../core/benchmark/benchmark";
 import { generateRandomNetwork } from "../core/generator/randomNetwork";
-import { EXAMPLE_NETWORKS } from "../data/examples";
+import { EXAMPLE_NETWORKS, ROUTING_EXAMPLE_NETWORKS } from "../data/examples";
 
+/** Reloj falso: avanza 1 ms cada vez que se consulta (resultados predecibles). */
 function fakeClock() {
   let t = 0;
   return () => t++;
 }
 
 describe("benchmarkNetwork", () => {
-  const net = EXAMPLE_NETWORKS[1].network;
+  const net = EXAMPLE_NETWORKS[1].network; // 12 switches
 
   it("devuelve una fila por algoritmo con sus datos", () => {
     const rows = benchmarkNetwork(net, 3, undefined, fakeClock());
@@ -86,5 +87,47 @@ describe("runBenchmark", () => {
       [2, 3],
       [3, 3],
     ]);
+  });
+});
+
+describe("benchmark de capa 3 (Dijkstra vs Bellman-Ford)", () => {
+  const rutas = ROUTING_EXAMPLE_NETWORKS[0].network;
+
+  it("compara Dijkstra y Bellman-Ford en la red actual", () => {
+    const rows = benchmarkNetwork(rutas, 3, ["dijkstra", "bellmanFord"], fakeClock(), "R1");
+    expect(rows.map((r) => r.algorithmId)).toEqual(["dijkstra", "bellmanFord"]);
+    expect(rows[0].algorithmName).toBe("Dijkstra");
+    expect(rows[1].algorithmName).toBe("Bellman-Ford");
+    for (const r of rows) {
+      expect(r.switches).toBe(6);
+      expect(r.selectedLinks).toBe(5);
+      expect(r.totalCost).toBe(38);
+      expect(r.distanceSum).toBe(0 + 7 + 9 + 20 + 20 + 11);
+    }
+  });
+
+  it("los algoritmos de capa 2 no traen suma de distancias", () => {
+    const [prim] = benchmarkNetwork(EXAMPLE_NETWORKS[0].network, 2, ["prim"], fakeClock());
+    expect(prim.distanceSum === undefined).toBe(true);
+  });
+
+  it("runBenchmark con kind router genera redes de routers y las mide", () => {
+    const rows = runBenchmark(
+      { sizes: [10, 20], repetitions: 2, algorithms: ["dijkstra", "bellmanFord"], kind: "router" },
+      undefined,
+      fakeClock()
+    );
+    expect(rows).toHaveLength(4);
+    expect(rows.map((r) => r.switches)).toEqual([10, 10, 20, 20]);
+    for (let i = 0; i < rows.length; i += 2) {
+      expect(rows[i].distanceSum === rows[i + 1].distanceSum).toBe(true);
+      expect((rows[i].distanceSum ?? 0) > 0).toBe(true);
+    }
+  });
+
+  it("sin kind, runBenchmark sigue usando switches", () => {
+    const rows = runBenchmark({ sizes: [10], repetitions: 2, algorithms: ["kruskal"] }, undefined, fakeClock());
+    expect(rows).toHaveLength(1);
+    expect(rows[0].selectedLinks).toBe(9);
   });
 });

@@ -8,6 +8,14 @@ export const DEVICE_KINDS: readonly DeviceKind[] = [
   "accessPoint",
 ];
 
+export const DEVICE_KIND_LABELS: Record<DeviceKind, string> = {
+  switch: "Switch",
+  router: "Router",
+  pc: "Computadora",
+  server: "Servidor",
+  accessPoint: "Punto de acceso",
+};
+
 export type ElementStatus = "up" | "down";
 
 export interface Position {
