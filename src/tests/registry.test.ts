@@ -3,11 +3,12 @@ import { describe, it, expect } from "vitest";
 import {
   ALGORITHM_LIST,
   ALGORITHMS,
+  getAlgorithmsForMode,
   runAlgorithm,
 } from "../core/algorithms/registry";
 import type { Network } from "../core/model/network";
-import { validateResult } from "../core/validation/validator";
-import { EXAMPLE_NETWORKS } from "../data/examples";
+import { EXAMPLE_NETWORKS, ROUTING_EXAMPLE_NETWORKS } from "../data/examples";
+import { validateResult, validateRouting } from "../core/validation/validator";
 import { ESPERADOS } from "./helpers/loadExample";
 
 const byId = (id: string): Network => {
@@ -16,11 +17,17 @@ const byId = (id: string): Network => {
   return found.network;
 };
 
+/** Algoritmos de capa 2 (los de capa 3 tienen sus propias pruebas en dijkstra.test.ts). */
+const LAYER2 = getAlgorithmsForMode("layer2");
+
 const connected = EXAMPLE_NETWORKS.filter((e) => ESPERADOS[e.id].estaConectada);
 
 describe("registro de algoritmos", () => {
-  it("tiene Prim y Kruskal", () => {
-    expect(ALGORITHM_LIST.map((a) => a.id)).toEqual(["prim", "kruskal"]);
+  it("tiene Prim y Kruskal en capa 2 y Dijkstra en capa 3", () => {
+    expect(ALGORITHM_LIST.map((a) => a.id)).toEqual(["prim", "kruskal", "dijkstra", "bellmanFord"]);
+    expect(LAYER2.map((a) => a.id)).toEqual(["prim", "kruskal"]);
+    expect(getAlgorithmsForMode("layer3").map((a) => a.id)).toEqual(["dijkstra", "bellmanFord"]);
+    expect(ALGORITHMS.dijkstra.layer).toBe("layer3");
     expect(ALGORITHMS.kruskal.name).toBe("Kruskal");
     expect(ALGORITHMS.prim.needsStartNode).toBe(true);
     expect(ALGORITHMS.kruskal.needsStartNode).toBe(false);
@@ -35,7 +42,7 @@ describe("registro de algoritmos", () => {
 
 describe("resultado unificado en las redes de ejemplo", () => {
   for (const example of EXAMPLE_NETWORKS) {
-    for (const def of ALGORITHM_LIST) {
+    for (const def of LAYER2) {
       describe(`${def.name} en ${example.id}`, () => {
         const result = def.run(example.network);
         const allIds = example.network.links.map((l) => l.id).sort();
@@ -181,7 +188,7 @@ describe("casos borde", () => {
   };
 
   it("red vacía", () => {
-    for (const def of ALGORITHM_LIST) {
+    for (const def of LAYER2) {
       const r = def.run(empty);
       expect(r.totalCost).toBe(0);
       expect(r.selectedLinkIds).toHaveLength(0);
@@ -190,7 +197,7 @@ describe("casos borde", () => {
   });
 
   it("un solo switch", () => {
-    for (const def of ALGORITHM_LIST) {
+    for (const def of LAYER2) {
       const r = def.run(one);
       expect(r.isConnected).toBe(true);
       expect(r.componentCount).toBe(1);
@@ -210,7 +217,7 @@ describe("casos borde", () => {
         { id: "e2", source: "A", target: "B", cost: 5, status: "up" },
       ],
     };
-    for (const def of ALGORITHM_LIST) {
+    for (const def of LAYER2) {
       const r = def.run(net);
       expect(r.selectedLinkIds).toHaveLength(1);
       expect(r.discardedLinkIds).toHaveLength(1);
@@ -222,12 +229,91 @@ describe("casos borde", () => {
 describe("prepareBenchmark", () => {
   it("devuelve el mismo costo y cantidad de enlaces que run()", () => {
     for (const example of connected) {
-      for (const def of ALGORITHM_LIST) {
+      for (const def of LAYER2) {
         const out = def.prepareBenchmark(example.network)();
         const full = def.run(example.network);
         expect(out.totalCost).toBe(full.totalCost);
         expect(out.selectedLinks).toBe(full.selectedLinkIds.length);
       }
     }
+  });
+});
+
+describe("Dijkstra a través del registro", () => {
+  const red = ROUTING_EXAMPLE_NETWORKS[0].network;
+
+  it("devuelve el resultado unificado con datos de enrutamiento", () => {
+    const r = runAlgorithm("dijkstra", red, { startNodeId: "R1" });
+    expect(r.algorithmId).toBe("dijkstra");
+    expect(r.startNodeId).toBe("R1");
+    expect(r.totalCost).toBe(38);
+    expect(r.selectedLinkIds).toHaveLength(5);
+    expect(r.routing?.distances["R5"]).toBe(20);
+  });
+
+  it("los pasos unificados son los enlaces del árbol, con costo acumulado", () => {
+    const r = runAlgorithm("dijkstra", red, { startNodeId: "R1" });
+    expect(r.steps).toHaveLength(5);
+    expect(r.steps.every((s) => s.decision === "accepted")).toBe(true);
+    expect(r.steps[r.steps.length - 1].acceptedLinkIds).toHaveLength(5);
+  });
+
+  it("ignora los dispositivos que no son routers", () => {
+    const mixta = {
+      ...red,
+      devices: [...red.devices, { id: "PC1", kind: "pc" as const, label: "PC1", position: { x: 0, y: 0 }, status: "up" as const }],
+      links: [...red.links, { id: "ex", source: "R1", target: "PC1", cost: 1, status: "up" as const }],
+    };
+    const r = runAlgorithm("dijkstra", mixta, { startNodeId: "R1" });
+    expect(r.totalCost).toBe(38);
+    expect("PC1" in (r.routing?.distances ?? {})).toBe(false);
+  });
+});
+
+describe("Bellman-Ford a través del registro", () => {
+  const red = ROUTING_EXAMPLE_NETWORKS[0].network;
+  const r = runAlgorithm("bellmanFord", red, { startNodeId: "R1" });
+
+  it("da el mismo resultado de enrutamiento que Dijkstra", () => {
+    const d = runAlgorithm("dijkstra", red, { startNodeId: "R1" });
+    expect(r.algorithmId).toBe("bellmanFord");
+    expect(r.routing?.distances).toEqual(d.routing?.distances);
+    expect(r.totalCost).toBe(38);
+    expect(r.selectedLinkIds).toHaveLength(5);
+    expect(r.startNodeId).toBe("R1");
+  });
+
+  it("los pasos son las mejoras, y el último deja el árbol final", () => {
+    expect(r.steps).toHaveLength(8);
+    expect(r.steps.every((s) => s.decision === "accepted")).toBe(true);
+    const ultimo = r.steps[r.steps.length - 1];
+    expect([...ultimo.acceptedLinkIds].sort()).toEqual([...r.selectedLinkIds].sort());
+    expect(ultimo.totalCost).toBe(38);
+  });
+
+  it("una mejora reemplaza el enlace anterior del mismo router", () => {
+    // R4 se alcanza primero con 22 y luego mejora a 20 por otro enlace
+    const hacia = r.steps.filter((s) => s.explanation.startsWith("Ronda 1: R4"));
+    expect(hacia).toHaveLength(2);
+    expect(hacia[0].linkId === hacia[1].linkId).toBe(false);
+    expect(hacia[1].acceptedLinkIds.includes(hacia[0].linkId)).toBe(false);
+    expect(hacia[1].acceptedLinkIds).toHaveLength(hacia[0].acceptedLinkIds.length);
+  });
+
+  it("el resultado pasa la validación de optimalidad", () => {
+    for (const e of ROUTING_EXAMPLE_NETWORKS) {
+      const res = runAlgorithm("bellmanFord", e.network);
+      expect(validateRouting(e.network, res)).toEqual([]);
+      expect(validateResult(e.network, res).hasCycles).toBe(false);
+    }
+  });
+
+  it("recordSteps en false no guarda pasos", () => {
+    expect(runAlgorithm("bellmanFord", red, { recordSteps: false }).steps).toHaveLength(0);
+  });
+
+  it("prepareBenchmark da el mismo costo que run", () => {
+    const out = ALGORITHMS.bellmanFord.prepareBenchmark(red, { startNodeId: "R1" })();
+    expect(out).toEqual({ totalCost: 38, selectedLinks: 5, distanceSum: 67 });
   });
 });

@@ -1,4 +1,5 @@
-import type { Device, Link, Network } from "../model/network";
+import type { Device, DeviceKind, Link, Network } from "../model/network";
+import { deviceIdPrefix } from "../model/networkOps";
 
 export interface RandomNetworkOptions {
   switches: number;
@@ -6,6 +7,7 @@ export interface RandomNetworkOptions {
   minCost?: number;
   maxCost?: number;
   seed?: number;
+  kind?: DeviceKind;
 }
 
 export const MAX_RANDOM_SWITCHES = 5000;
@@ -32,6 +34,9 @@ export function generateRandomNetwork(options: RandomNetworkOptions): Network {
   const minCost = options.minCost ?? 1;
   const maxCost = options.maxCost ?? 20;
   const wantedExtra = options.extraLinks ?? n;
+  const kind: DeviceKind = options.kind ?? "switch";
+  const prefix = deviceIdPrefix(kind);
+  const labelPrefix = kind === "switch" ? "SW" : prefix;
 
   if (!Number.isInteger(n) || n < 1 || n > MAX_RANDOM_SWITCHES) {
     throw new RangeError(`switches debe ser un entero entre 1 y ${MAX_RANDOM_SWITCHES}`);
@@ -57,9 +62,9 @@ export function generateRandomNetwork(options: RandomNetworkOptions): Network {
           }
         : { x: 100 + (i % columns) * 140, y: 100 + Math.floor(i / columns) * 140 };
     devices.push({
-      id: `S${i + 1}`,
-      kind: "switch",
-      label: `SW${i + 1}`,
+      id: `${prefix}${i + 1}`,
+      kind,
+      label: `${labelPrefix}${i + 1}`,
       position,
       status: "up",
     });
@@ -73,8 +78,8 @@ export function generateRandomNetwork(options: RandomNetworkOptions): Network {
     used.add(key(a, b));
     links.push({
       id: `e${links.length + 1}`,
-      source: `S${a + 1}`,
-      target: `S${b + 1}`,
+      source: `${prefix}${a + 1}`,
+      target: `${prefix}${b + 1}`,
       cost: randomInt(rng, minCost, maxCost),
       status: "up",
     });
@@ -107,7 +112,7 @@ export function generateRandomNetwork(options: RandomNetworkOptions): Network {
   }
 
   return {
-    name: `Red aleatoria (${n} switches, semilla ${seed})`,
+    name: `Red aleatoria (${n} ${kind === "router" ? "routers" : "switches"}, semilla ${seed})`,
     devices,
     links,
   };

@@ -1,0 +1,99 @@
+{
+  "name": "ruta-con-empates",
+  "devices": [
+    {
+      "id": "R1",
+      "kind": "router",
+      "label": "R1",
+      "position": {
+        "x": 100,
+        "y": 200
+      },
+      "status": "up"
+    },
+    {
+      "id": "R2",
+      "kind": "router",
+      "label": "R2",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "status": "up"
+    },
+    {
+      "id": "R3",
+      "kind": "router",
+      "label": "R3",
+      "position": {
+        "x": 300,
+        "y": 300
+      },
+      "status": "up"
+    },
+    {
+      "id": "R4",
+      "kind": "router",
+      "label": "R4",
+      "position": {
+        "x": 500,
+        "y": 200
+      },
+      "status": "up"
+    },
+    {
+      "id": "R5",
+      "kind": "router",
+      "label": "R5",
+      "position": {
+        "x": 700,
+        "y": 200
+      },
+      "status": "up"
+    }
+  ],
+  "links": [
+    {
+      "id": "e1",
+      "source": "R1",
+      "target": "R2",
+      "cost": 1,
+      "status": "up"
+    },
+    {
+      "id": "e2",
+      "source": "R1",
+      "target": "R3",
+      "cost": 1,
+      "status": "up"
+    },
+    {
+      "id": "e3",
+      "source": "R2",
+      "target": "R4",
+      "cost": 1,
+      "status": "up"
+    },
+    {
+      "id": "e4",
+      "source": "R3",
+      "target": "R4",
+      "cost": 1,
+      "status": "up"
+    },
+    {
+      "id": "e5",
+      "source": "R4",
+      "target": "R5",
+      "cost": 2,
+      "status": "up"
+    },
+    {
+      "id": "e6",
+      "source": "R2",
+      "target": "R3",
+      "cost": 5,
+      "status": "up"
+    }
+  ]
+}

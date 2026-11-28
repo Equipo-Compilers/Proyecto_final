@@ -1,0 +1,84 @@
+{
+  "ruta-6-routers": {
+    "descripcion": "6 routers: red clásica de Dijkstra, resuelta a mano desde R1.",
+    "origen": "R1",
+    "distancias": {
+      "R1": 0,
+      "R2": 7,
+      "R3": 9,
+      "R4": 20,
+      "R5": 20,
+      "R6": 11
+    },
+    "predecesores": {
+      "R1": null,
+      "R2": "R1",
+      "R3": "R1",
+      "R4": "R3",
+      "R5": "R6",
+      "R6": "R3"
+    },
+    "idsEnlacesDelArbol": [
+      "e1",
+      "e2",
+      "e7",
+      "e6",
+      "e9"
+    ],
+    "costoDelArbol": 38,
+    "alcanzables": 6,
+    "totalRouters": 6
+  },
+  "ruta-con-empates": {
+    "descripcion": "5 routers con dos caminos igual de cortos hacia R4: prueba el desempate.",
+    "origen": "R1",
+    "distancias": {
+      "R1": 0,
+      "R2": 1,
+      "R3": 1,
+      "R4": 2,
+      "R5": 4
+    },
+    "predecesores": {
+      "R1": null,
+      "R2": "R1",
+      "R3": "R1",
+      "R4": "R2",
+      "R5": "R4"
+    },
+    "idsEnlacesDelArbol": [
+      "e1",
+      "e2",
+      "e3",
+      "e5"
+    ],
+    "costoDelArbol": 5,
+    "alcanzables": 5,
+    "totalRouters": 5
+  },
+  "ruta-desconectada": {
+    "descripcion": "Dos islas de routers sin conexión: desde R1, R4 y R5 son inalcanzables.",
+    "origen": "R1",
+    "distancias": {
+      "R1": 0,
+      "R2": 4,
+      "R3": 6,
+      "R4": null,
+      "R5": null
+    },
+    "predecesores": {
+      "R1": null,
+      "R2": "R1",
+      "R3": "R2",
+      "R4": null,
+      "R5": null
+    },
+    "idsEnlacesDelArbol": [
+      "e1",
+      "e2"
+    ],
+    "costoDelArbol": 6,
+    "alcanzables": 3,
+    "totalRouters": 5
+  }
+}

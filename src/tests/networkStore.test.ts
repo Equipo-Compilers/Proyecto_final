@@ -1,7 +1,7 @@
 import { beforeEach, describe, it, expect } from "vitest";
 
 import { createEmptyNetwork } from "../core/model/network";
-import { EXAMPLE_NETWORKS } from "../data/examples";
+import { EXAMPLE_NETWORKS, ROUTING_EXAMPLE_NETWORKS } from "../data/examples";
 import { useNetworkStore } from "../store/networkStore";
 
 const store = () => useNetworkStore.getState();
@@ -12,7 +12,11 @@ beforeEach(() => {
   useNetworkStore.setState({
     network: createEmptyNetwork(),
     selectedAlgorithmId: "kruskal",
+    analysisMode: "layer2",
     startNodeId: null,
+    destinationId: null,
+    selectedRouterId: null,
+    packet: { status: "idle", progress: 0, speed: 1 },
     result: null,
     stepIndex: null,
     lastError: null,
@@ -222,5 +226,226 @@ describe("paso a paso", () => {
     store().nextStep();
     store().runSelectedAlgorithm();
     expect(store().stepIndex).toBeNull();
+  });
+});
+
+describe("modo de análisis (capa 2 / capa 3)", () => {
+  it("empieza en capa 2", () => {
+    expect(store().analysisMode).toBe("layer2");
+  });
+
+  it("cambiar a capa 3 selecciona Dijkstra y borra el resultado", () => {
+    store().setNetwork(five);
+    store().runSelectedAlgorithm();
+    expect(store().result === null).toBe(false);
+    store().setAnalysisMode("layer3");
+    expect(store().analysisMode).toBe("layer3");
+    expect(store().selectedAlgorithmId).toBe("dijkstra");
+    expect(store().result).toBeNull();
+    expect(store().startNodeId).toBeNull();
+  });
+
+  it("volver a capa 2 selecciona el primer algoritmo de capa 2", () => {
+    store().setAnalysisMode("layer3");
+    store().setAnalysisMode("layer2");
+    expect(store().selectedAlgorithmId).toBe("prim");
+  });
+
+  it("seleccionar un algoritmo también fija su modo", () => {
+    store().selectAlgorithm("dijkstra");
+    expect(store().analysisMode).toBe("layer3");
+    store().selectAlgorithm("kruskal");
+    expect(store().analysisMode).toBe("layer2");
+  });
+
+  it("capa 3 sin routers da un error claro", () => {
+    store().setNetwork(five); // solo switches
+    store().setAnalysisMode("layer3");
+    store().runSelectedAlgorithm();
+    expect(store().result).toBeNull();
+    expect(store().lastError).toContain("solo participan los routers");
+  });
+
+  it("ejecuta Dijkstra sobre una red de routers", () => {
+    store().setNetwork(ROUTING_EXAMPLE_NETWORKS[0].network);
+    store().setAnalysisMode("layer3");
+    store().setStartNode("R1");
+    store().runSelectedAlgorithm();
+    expect(store().lastError).toBeNull();
+    expect(store().result?.routing?.distances["R4"]).toBe(20);
+  });
+
+  it("red vacía en capa 2 da el mensaje genérico", () => {
+    store().runSelectedAlgorithm();
+    expect(store().lastError).toContain("Agrega al menos un dispositivo");
+  });
+});
+
+describe("capa 3: Bellman-Ford, destino y router seleccionado", () => {
+  const rutas = ROUTING_EXAMPLE_NETWORKS[0].network;
+
+  it("Bellman-Ford se puede elegir y ejecutar", () => {
+    store().setNetwork(rutas);
+    store().selectAlgorithm("bellmanFord");
+    expect(store().analysisMode).toBe("layer3");
+    store().setStartNode("R1");
+    store().runSelectedAlgorithm();
+    expect(store().lastError).toBeNull();
+    expect(store().result?.algorithmId).toBe("bellmanFord");
+    expect(store().result?.routing?.distances["R5"]).toBe(20);
+  });
+
+  it("el destino y el router seleccionado se guardan", () => {
+    store().setDestination("R5");
+    store().selectRouter("R2");
+    expect(store().destinationId).toBe("R5");
+    expect(store().selectedRouterId).toBe("R2");
+  });
+
+  it("elegir destino no borra el resultado", () => {
+    store().setNetwork(rutas);
+    store().setStartNode("R1");
+    store().selectAlgorithm("dijkstra");
+    store().runSelectedAlgorithm();
+    store().setDestination("R4");
+    expect(store().result === null).toBe(false);
+  });
+
+  it("cambiar de algoritmo conserva el destino", () => {
+    store().setDestination("R4");
+    store().selectAlgorithm("bellmanFord");
+    expect(store().destinationId).toBe("R4");
+  });
+
+  it("cargar otra red, vaciarla o quitar el router borra destino y selección", () => {
+    store().setNetwork(rutas);
+    store().setDestination("R5");
+    store().selectRouter("R5");
+    store().removeDevice("R5");
+    expect(store().destinationId).toBeNull();
+    expect(store().selectedRouterId).toBeNull();
+
+    store().setDestination("R2");
+    store().selectRouter("R2");
+    store().setNetwork(rutas);
+    expect(store().destinationId).toBeNull();
+    expect(store().selectedRouterId).toBeNull();
+
+    store().setDestination("R2");
+    store().selectRouter("R2");
+    store().clearNetwork();
+    expect(store().destinationId).toBeNull();
+    expect(store().selectedRouterId).toBeNull();
+  });
+
+  it("cambiar de modo borra el destino", () => {
+    store().setDestination("R2");
+    store().setAnalysisMode("layer3");
+    expect(store().destinationId).toBeNull();
+  });
+});
+
+describe("animación del paquete (F2-8)", () => {
+  const rutas = ROUTING_EXAMPLE_NETWORKS[0].network;
+  const preparar = (destino: string | null) => {
+    store().setNetwork(rutas);
+    store().selectAlgorithm("dijkstra");
+    store().setStartNode("R1");
+    store().runSelectedAlgorithm();
+    store().setDestination(destino);
+  };
+
+  it("empieza quieto", () => {
+    expect(store().packet).toEqual({ status: "idle", progress: 0, speed: 1 });
+  });
+
+  it("sin destino o sin resultado no se puede enviar", () => {
+    preparar(null);
+    store().playPacket();
+    expect(store().packet.status).toBe("idle");
+    store().clearResult();
+    store().setDestination("R5");
+    store().playPacket();
+    expect(store().packet.status).toBe("idle");
+  });
+
+  it("si el destino es el origen no hay nada que recorrer", () => {
+    preparar("R1");
+    store().playPacket();
+    expect(store().packet.status).toBe("idle");
+  });
+
+  it("avanza con tickPacket y llega al destino", () => {
+    preparar("R5"); // 3 saltos = 3 s a velocidad 1
+    store().playPacket();
+    expect(store().packet.status).toBe("playing");
+    store().tickPacket(1500);
+    expect(Math.abs(store().packet.progress - 0.5) < 1e-9).toBe(true);
+    store().tickPacket(5000);
+    expect(store().packet.progress).toBe(1);
+    expect(store().packet.status).toBe("finished");
+  });
+
+  it("pausa, continúa y respeta la velocidad", () => {
+    preparar("R5");
+    store().setPacketSpeed(2);
+    store().playPacket();
+    store().tickPacket(750);
+    expect(Math.abs(store().packet.progress - 0.5) < 1e-9).toBe(true);
+    store().pausePacket();
+    expect(store().packet.status).toBe("paused");
+    store().tickPacket(5000); // en pausa no avanza
+    expect(Math.abs(store().packet.progress - 0.5) < 1e-9).toBe(true);
+    store().playPacket();
+    expect(store().packet.status).toBe("playing");
+    expect(Math.abs(store().packet.progress - 0.5) < 1e-9).toBe(true);
+  });
+
+  it("tras llegar, enviar de nuevo empieza desde el origen", () => {
+    preparar("R5");
+    store().playPacket();
+    store().tickPacket(99999);
+    store().playPacket();
+    expect(store().packet.status).toBe("playing");
+    expect(store().packet.progress).toBe(0);
+  });
+
+  it("reiniciar vuelve al origen pero conserva la velocidad", () => {
+    preparar("R5");
+    store().setPacketSpeed(4);
+    store().playPacket();
+    store().tickPacket(300);
+    store().resetPacket();
+    expect(store().packet).toEqual({ status: "idle", progress: 0, speed: 4 });
+  });
+
+  it("ignora velocidades inválidas", () => {
+    store().setPacketSpeed(0);
+    store().setPacketSpeed(-2);
+    store().setPacketSpeed(Number.NaN);
+    expect(store().packet.speed).toBe(1);
+  });
+
+  it("cambiar de destino, ejecutar de nuevo o cambiar la red reinicia el paquete", () => {
+    preparar("R5");
+    store().playPacket();
+    store().tickPacket(500);
+    store().setDestination("R4");
+    expect(store().packet.status).toBe("idle");
+
+    store().playPacket();
+    store().tickPacket(500);
+    store().runSelectedAlgorithm();
+    expect(store().packet.status).toBe("idle");
+
+    store().playPacket();
+    store().addDevice();
+    expect(store().packet.status).toBe("idle");
+  });
+
+  it("tickPacket sin estar en marcha no hace nada", () => {
+    preparar("R5");
+    store().tickPacket(1000);
+    expect(store().packet.progress).toBe(0);
   });
 });

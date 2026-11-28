@@ -12,13 +12,24 @@ import {
 } from "@xyflow/react";
 
 import { getLinkStates } from "../../core/model/linkVisualState";
+import { getPacketPosition } from "../../core/utils/packetAnimation";
+import { getRoutePath } from "../../core/utils/routing";
 import { useNetworkStore } from "../../store/networkStore";
 import { CostEdge, type CostFlowEdge } from "./CostEdge";
 import { EditorToolbar } from "./EditorToolbar";
+import { PacketNode, type PacketFlowNode } from "./PacketNode";
 import { SwitchNode, type SwitchFlowNode } from "./SwitchNode";
+
+type EditorNode = SwitchFlowNode | PacketFlowNode;
+
+const PACKET_NODE_ID = "__packet__";
+const NODE_WIDTH = 120;
+const NODE_HEIGHT = 76;
+const PACKET_SIZE = 24;
 
 const nodeTypes = {
   switchNode: SwitchNode,
+  packetNode: PacketNode,
 };
 
 const edgeTypes = {
@@ -30,6 +41,10 @@ export function NetworkEditor() {
   const result = useNetworkStore((s) => s.result);
   const stepIndex = useNetworkStore((s) => s.stepIndex);
   const startNodeId = useNetworkStore((s) => s.startNodeId);
+  const destinationId = useNetworkStore((s) => s.destinationId);
+  const selectedRouterId = useNetworkStore((s) => s.selectedRouterId);
+  const packet = useNetworkStore((s) => s.packet);
+  const selectRouter = useNetworkStore((s) => s.selectRouter);
 
   const moveDevice = useNetworkStore((s) => s.moveDevice);
   const renameDevice = useNetworkStore((s) => s.renameDevice);
@@ -41,23 +56,81 @@ export function NetworkEditor() {
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [selectedEdgeIds, setSelectedEdgeIds] = useState<string[]>([]);
 
-  const nodes: SwitchFlowNode[] = useMemo(
+  const route = useMemo(
+    () => getRoutePath(network, result, destinationId),
+    [network, result, destinationId]
+  );
+  const routeNodeIds = useMemo(() => new Set(route?.deviceIds ?? []), [route]);
+  const routeLinkIds = useMemo(() => new Set(route?.linkIds ?? []), [route]);
+
+  const originId = result?.routing?.sourceId ?? startNodeId;
+
+  const devicePositions = useMemo(
+    () => new Map(network.devices.map((d) => [d.id, d.position])),
+    [network.devices]
+  );
+
+  const packetPosition = useMemo(
+    () => (packet.status === "idle" ? null : getPacketPosition(route, devicePositions, packet.progress)),
+    [packet.status, packet.progress, route, devicePositions]
+  );
+  const traveledKey = packetPosition ? packetPosition.traveledLinkIds.join(",") : "";
+  const traveledLinkIds = useMemo(
+    () => new Set(traveledKey === "" ? [] : traveledKey.split(",")),
+    [traveledKey]
+  );
+
+  const deviceNodes: SwitchFlowNode[] = useMemo(
     () =>
       network.devices.map((device) => ({
         id: device.id,
         type: "switchNode",
         position: device.position,
-        width: 120,
-        height: 76,
+        width: NODE_WIDTH,
+        height: NODE_HEIGHT,
         data: {
           label: device.label,
-          isStartNode: device.id === startNodeId,
+          kind: device.kind,
+          isStartNode: device.id === originId,
+          isDestination: route !== null && device.id === destinationId,
+          isRouteNode: routeNodeIds.has(device.id),
+          isTableRouter: device.kind === "router" && device.id === selectedRouterId,
           onRename: renameDevice,
           onDelete: removeDevice,
         },
       })),
-    [network.devices, startNodeId, renameDevice, removeDevice]
+    [
+      network.devices,
+      originId,
+      route,
+      destinationId,
+      routeNodeIds,
+      selectedRouterId,
+      renameDevice,
+      removeDevice,
+    ]
   );
+
+  const nodes: EditorNode[] = useMemo(() => {
+    if (!packetPosition) return deviceNodes;
+    const packetNode: PacketFlowNode = {
+      id: PACKET_NODE_ID,
+      type: "packetNode",
+      position: {
+        x: packetPosition.x + (NODE_WIDTH - PACKET_SIZE) / 2,
+        y: packetPosition.y + (NODE_HEIGHT - PACKET_SIZE) / 2,
+      },
+      width: PACKET_SIZE,
+      height: PACKET_SIZE,
+      data: {},
+      draggable: false,
+      selectable: false,
+      connectable: false,
+      focusable: false,
+      zIndex: 1000,
+    };
+    return [...deviceNodes, packetNode];
+  }, [deviceNodes, packetPosition]);
 
   const linkStates = useMemo(
     () => getLinkStates(network, result, stepIndex),
@@ -74,11 +147,13 @@ export function NetworkEditor() {
         data: {
           cost: link.cost,
           visualState: linkStates.get(link.id) ?? "neutral",
+          isRoute: routeLinkIds.has(link.id),
+          isTraveled: traveledLinkIds.has(link.id),
           onUpdateCost: updateLinkCost,
           onDelete: removeLink,
         },
       })),
-    [network.links, linkStates, updateLinkCost, removeLink]
+    [network.links, linkStates, routeLinkIds, traveledLinkIds, updateLinkCost, removeLink]
   );
 
   const translateExtent = useMemo((): [[number, number], [number, number]] => {
@@ -105,11 +180,11 @@ export function NetworkEditor() {
   }, [network.devices]);
 
   const handleNodesChange = useCallback(
-    (changes: NodeChange<SwitchFlowNode>[]) => {
+    (changes: NodeChange<EditorNode>[]) => {
       for (const change of changes) {
-        if (change.type === "position" && change.position) {
-          moveDevice(change.id, change.position);
-        }
+        if (change.type !== "position" || !change.position) continue;
+        if (change.id === PACKET_NODE_ID) continue;
+        moveDevice(change.id, change.position);
       }
     },
     [moveDevice]
@@ -127,6 +202,15 @@ export function NetworkEditor() {
       addLink(connection.source, connection.target, parsedCost);
     },
     [addLink]
+  );
+
+  const handleNodeClick = useCallback(
+    (_event: unknown, node: EditorNode) => {
+      if (node.type !== "switchNode") return;
+      const device = network.devices.find((d) => d.id === node.id);
+      if (device?.kind === "router") selectRouter(device.id);
+    },
+    [network.devices, selectRouter]
   );
 
   const handleSelectionChange = useCallback(
@@ -163,7 +247,7 @@ export function NetworkEditor() {
               El lienzo está vacío
             </p>
             <p className="mt-1 max-w-md text-xs text-slate-500 sm:text-sm">
-              Toca «+ Agregar Switch» arriba o selecciona una red de ejemplo para empezar a simular.
+              Toca «+ Switch» o «+ Router» arriba, o selecciona una red de ejemplo para empezar a simular.
             </p>
           </div>
         )}
@@ -174,6 +258,7 @@ export function NetworkEditor() {
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           onNodesChange={handleNodesChange}
+          onNodeClick={handleNodeClick}
           onConnect={handleConnect}
           onSelectionChange={handleSelectionChange}
           onNodesDelete={(deleted) => deleted.forEach((n) => removeDevice(n.id))}

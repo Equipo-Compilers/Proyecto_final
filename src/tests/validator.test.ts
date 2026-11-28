@@ -3,8 +3,8 @@ import { describe, it, expect } from "vitest";
 import type { AlgorithmResult } from "../core/model/algorithmResult";
 import type { Network } from "../core/model/network";
 import { runAlgorithm } from "../core/algorithms/registry";
-import { validateNetwork, validateResult } from "../core/validation/validator";
-import { EXAMPLE_NETWORKS } from "../data/examples";
+import { validateNetwork, validateResult, validateRouting } from "../core/validation/validator";
+import { EXAMPLE_NETWORKS, ROUTING_EXAMPLE_NETWORKS } from "../data/examples";
 
 function dev(id: string) {
   return { id, kind: "switch" as const, label: id, position: { x: 0, y: 0 }, status: "up" as const };
@@ -106,5 +106,60 @@ describe("validateResult", () => {
   it("la red vacía es válida", () => {
     const empty: Network = { name: "x", devices: [], links: [] };
     expect(validateResult(empty, fake([])).ok).toBe(true);
+  });
+});
+
+describe("validateRouting", () => {
+  const routers = ROUTING_EXAMPLE_NETWORKS[0].network;
+  const good = () => runAlgorithm("dijkstra", routers);
+
+  it("acepta las distancias que calcula Dijkstra", () => {
+    for (const e of ROUTING_EXAMPLE_NETWORKS) {
+      expect(validateRouting(e.network, runAlgorithm("dijkstra", e.network))).toEqual([]);
+    }
+  });
+
+  it("un resultado sin datos de enrutamiento no tiene nada que validar", () => {
+    expect(validateRouting(triangle, fake(["e1"]))).toEqual([]);
+  });
+
+  it("detecta una distancia demasiado larga (hay una ruta mejor)", () => {
+    const r = good();
+    r.routing!.distances["R4"] = 25;
+    expect(validateRouting(routers, r).length > 0).toBe(true);
+  });
+
+  it("detecta una distancia demasiado corta (no cuadra con su predecesor)", () => {
+    const r = good();
+    r.routing!.distances["R4"] = 15;
+    expect(validateRouting(routers, r).length > 0).toBe(true);
+  });
+
+  it("detecta que el origen no tiene distancia 0", () => {
+    const r = good();
+    r.routing!.distances["R1"] = 3;
+    expect(validateRouting(routers, r).length > 0).toBe(true);
+  });
+
+  it("detecta un dispositivo alcanzable marcado como inalcanzable", () => {
+    const r = good();
+    r.routing!.distances["R5"] = null;
+    expect(validateRouting(routers, r).length > 0).toBe(true);
+  });
+
+  it("detecta un predecesor que falta o que no es válido", () => {
+    const sinPred = good();
+    sinPred.routing!.predecessors["R5"] = null;
+    expect(validateRouting(routers, sinPred).length > 0).toBe(true);
+
+    const malPred = good();
+    malPred.routing!.predecessors["R5"] = "R2";
+    expect(validateRouting(routers, malPred).length > 0).toBe(true);
+  });
+
+  it("detecta un origen que no está en la red", () => {
+    const r = good();
+    r.routing!.sourceId = "X9";
+    expect(validateRouting(routers, r).length > 0).toBe(true);
   });
 });

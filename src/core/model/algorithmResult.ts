@@ -1,4 +1,6 @@
-export type AlgorithmId = "prim" | "kruskal";
+export type AlgorithmId = "prim" | "kruskal" | "dijkstra" | "bellmanFord";
+
+export type AnalysisMode = "layer2" | "layer3";
 
 export type StepDecision = "accepted" | "discarded";
 
@@ -11,6 +13,12 @@ export interface AlgorithmStep {
   explanation: string;
 }
 
+export interface RoutingData {
+  sourceId: string;
+  distances: Record<string, number | null>;
+  predecessors: Record<string, string | null>;
+}
+
 export interface AlgorithmResult {
   algorithmId: AlgorithmId;
   selectedLinkIds: string[];
@@ -20,4 +28,5 @@ export interface AlgorithmResult {
   componentCount: number;
   steps: AlgorithmStep[];
   startNodeId?: string;
+  routing?: RoutingData;
 }

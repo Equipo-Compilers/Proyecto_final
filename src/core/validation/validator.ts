@@ -102,3 +102,67 @@ export function validateResult(
     problems,
   };
 }
+
+const EPSILON = 1e-9;
+
+export function validateRouting(network: Network, result: AlgorithmResult): string[] {
+  const routing = result.routing;
+  if (!routing) return [];
+
+  const problems: string[] = [];
+  const { sourceId, distances, predecessors } = routing;
+  const ids = new Set(network.devices.map((d) => d.id));
+
+  if (!ids.has(sourceId)) {
+    return [`El origen «${sourceId}» no está en la red`];
+  }
+  if (distances[sourceId] !== 0) problems.push("La distancia del origen debe ser 0");
+
+  const cheapest = new Map<string, number>();
+  for (const l of network.links) {
+    const key = `${l.source}|${l.target}`;
+    const back = `${l.target}|${l.source}`;
+    const best = Math.min(cheapest.get(key) ?? Infinity, l.cost);
+    cheapest.set(key, best);
+    cheapest.set(back, best);
+  }
+
+  for (const l of network.links) {
+    const du = distances[l.source];
+    const dv = distances[l.target];
+    if (du === undefined || dv === undefined) {
+      problems.push(`Faltan distancias para el enlace «${l.id}»`);
+      continue;
+    }
+    if ((du === null) !== (dv === null)) {
+      problems.push(`El enlace «${l.id}» une un dispositivo alcanzable con uno marcado como inalcanzable`);
+    } else if (du !== null && dv !== null) {
+      if (dv > du + l.cost + EPSILON || du > dv + l.cost + EPSILON) {
+        problems.push(`Hay una ruta más corta usando el enlace «${l.id}»`);
+      }
+    }
+  }
+
+  for (const id of ids) {
+    if (id === sourceId) continue;
+    const d = distances[id];
+    const pred = predecessors[id] ?? null;
+    if (d === null || d === undefined) {
+      if (pred !== null) problems.push(`«${id}» es inalcanzable pero tiene predecesor`);
+      continue;
+    }
+    if (pred === null) {
+      problems.push(`«${id}» es alcanzable pero no tiene predecesor`);
+      continue;
+    }
+    const dp = distances[pred];
+    const cost = cheapest.get(`${pred}|${id}`);
+    if (dp === null || dp === undefined || cost === undefined) {
+      problems.push(`El predecesor de «${id}» no es válido`);
+    } else if (Math.abs(dp + cost - d) > EPSILON) {
+      problems.push(`La distancia de «${id}» no coincide con la de su predecesor`);
+    }
+  }
+
+  return problems;
+}

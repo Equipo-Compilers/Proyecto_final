@@ -20,6 +20,10 @@ const ID_PREFIX: Record<DeviceKind, string> = {
   accessPoint: "AP",
 };
 
+export function deviceIdPrefix(kind: DeviceKind): string {
+  return ID_PREFIX[kind];
+}
+
 function ok(network: Network, createdId?: string): OpResult {
   return createdId === undefined
     ? { network, error: null }

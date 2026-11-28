@@ -12,6 +12,8 @@ import type { LinkVisualState } from "../../core/model/linkVisualState";
 export type CostEdgeData = {
   cost: number;
   visualState: LinkVisualState;
+  isRoute?: boolean;
+  isTraveled?: boolean;
   onUpdateCost: (id: string, newCost: number) => void;
   onDelete: (id: string) => void;
 };
@@ -39,19 +41,26 @@ export function CostEdge({
 
   const visualState: LinkVisualState = data?.visualState ?? "neutral";
   const cost = data?.cost ?? 1;
+  const isRoute = data?.isRoute ?? false;
+  const isTraveled = data?.isTraveled ?? false;
 
-  // Asignación de colores según el estado del algoritmo (Issue #14)
   const strokeColor =
-    visualState === "selected"
-      ? "#10b981" // emerald-500 (arista incluida en el MST)
+    isTraveled
+      ? "#fde047"
+      : isRoute
+      ? "#f59e0b"
+      : visualState === "selected"
+      ? "#10b981"
       : visualState === "discarded"
-      ? "#f43f5e" // rose-500 (arista descartada / bucle bloqueado)
+      ? "#f43f5e"
       : selected
-      ? "#22d3ee" // cyan-400 (seleccionada por el usuario)
-      : "#64748b"; // slate-500 (sin evaluar)
+      ? "#22d3ee"
+      : "#64748b";
 
   const badgeStyle =
-    visualState === "selected"
+    isRoute || isTraveled
+      ? "border-amber-400 bg-amber-950 text-amber-200"
+      : visualState === "selected"
       ? "border-emerald-400 bg-emerald-950 text-emerald-300"
       : visualState === "discarded"
       ? "border-rose-500/70 bg-rose-950/90 text-rose-300 line-through opacity-80"
@@ -84,8 +93,8 @@ export function CostEdge({
         path={edgePath}
         style={{
           stroke: strokeColor,
-          strokeWidth: visualState === "selected" ? 3.5 : selected ? 3 : 2.2,
-          strokeDasharray: visualState === "discarded" ? "6 4" : undefined,
+          strokeWidth: isTraveled ? 5 : isRoute ? 4.5 : visualState === "selected" ? 3.5 : selected ? 3 : 2.2,
+          strokeDasharray: !isRoute && !isTraveled && visualState === "discarded" ? "6 4" : undefined,
         }}
       />
 

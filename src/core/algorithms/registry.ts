@@ -3,9 +3,14 @@ import type {
   AlgorithmId,
   AlgorithmResult,
   AlgorithmStep,
+  AnalysisMode,
+  RoutingData,
 } from "../model/algorithmResult";
 import type { KruskalEdge, KruskalGraph } from "../model/kruskalModel";
 import { countComponents } from "../utils/graph";
+import { networkForLayer } from "../utils/layers";
+import { executeBellmanFord } from "./bellmanFord";
+import { executeDijkstra } from "./dijkstra";
 import { executeKruskal } from "./kruskal";
 import { executePrim } from "./prim";
 
@@ -17,6 +22,8 @@ export interface RunOptions {
 export interface BenchmarkRunOutput {
   totalCost: number;
   selectedLinks: number;
+
+  distanceSum?: number;
 }
 
 export interface AlgorithmDefinition {
@@ -24,7 +31,9 @@ export interface AlgorithmDefinition {
   name: string;
   description: string;
   complexity: string;
+  layer: AnalysisMode;
   needsStartNode: boolean;
+  startNodeLabel: string;
   run: (network: Network, options?: RunOptions) => AlgorithmResult;
   prepareBenchmark: (
     network: Network,
@@ -50,9 +59,20 @@ function buildGraph(network: Network) {
   return { graph, linkByEdge };
 }
 
+function sumOfDistances(distances: Record<string, number | null>): number {
+  let sum = 0;
+  for (const d of Object.values(distances)) if (d !== null) sum += d;
+  return sum;
+}
+
 function resolveStartNode(network: Network, wanted?: string): string | undefined {
   if (wanted && network.devices.some((d) => d.id === wanted)) return wanted;
   return network.devices[0]?.id;
+}
+
+interface FinishExtras {
+  startNodeId?: string;
+  routing?: RoutingData;
 }
 
 function finish(
@@ -61,7 +81,7 @@ function finish(
   selectedLinkIds: string[],
   totalCost: number,
   steps: AlgorithmStep[],
-  startNodeId?: string
+  extras: FinishExtras = {}
 ): AlgorithmResult {
   const selected = new Set(selectedLinkIds);
   const componentCount = countComponents(network);
@@ -76,7 +96,8 @@ function finish(
     componentCount,
     steps,
   };
-  if (startNodeId !== undefined) result.startNodeId = startNodeId;
+  if (extras.startNodeId !== undefined) result.startNodeId = extras.startNodeId;
+  if (extras.routing !== undefined) result.routing = extras.routing;
   return result;
 }
 
@@ -127,7 +148,91 @@ function runPrim(network: Network, options: RunOptions = {}): AlgorithmResult {
     raw.mstEdges.map(idOf),
     raw.totalCost,
     options.recordSteps === false ? [] : steps,
-    startNode
+    { startNodeId: startNode }
+  );
+}
+
+function runDijkstra(network: Network, options: RunOptions = {}): AlgorithmResult {
+  const routers = networkForLayer(network, "layer3");
+  const source = resolveStartNode(routers, options.startNodeId);
+  if (source === undefined) return finish("dijkstra", routers, [], 0, []);
+
+  const { graph, linkByEdge } = buildGraph(routers);
+  const raw = executeDijkstra(
+    { graph, sourceNode: source },
+    { recordSteps: options.recordSteps ?? true }
+  );
+  const idOf = (edge: KruskalEdge) => linkByEdge.get(edge) as string;
+  const selectedLinkIds = raw.shortestPathEdges.map(idOf);
+
+  const steps: AlgorithmStep[] = [];
+  let treeEdgesSoFar = 0;
+  let cost = 0;
+  for (const s of raw.steps) {
+    if (s.treeEdge === null) continue;
+    treeEdgesSoFar++;
+    cost += s.treeEdge.weight;
+    steps.push({
+      stepNumber: steps.length + 1,
+      linkId: idOf(s.treeEdge),
+      decision: "accepted",
+      acceptedLinkIds: selectedLinkIds.slice(0, treeEdgesSoFar),
+      totalCost: cost,
+      explanation: s.explanation,
+    });
+  }
+
+  return finish("dijkstra", routers, selectedLinkIds, raw.treeCost, steps, {
+    startNodeId: source,
+    routing: {
+      sourceId: source,
+      distances: raw.distances,
+      predecessors: raw.predecessors,
+    },
+  });
+}
+
+function runBellmanFord(network: Network, options: RunOptions = {}): AlgorithmResult {
+  const routers = networkForLayer(network, "layer3");
+  const source = resolveStartNode(routers, options.startNodeId);
+  if (source === undefined) return finish("bellmanFord", routers, [], 0, []);
+
+  const { graph, linkByEdge } = buildGraph(routers);
+  const raw = executeBellmanFord(
+    { graph, sourceNode: source },
+    { recordSteps: options.recordSteps ?? true }
+  );
+  const idOf = (edge: KruskalEdge) => linkByEdge.get(edge) as string;
+
+  const steps: AlgorithmStep[] = [];
+  const treeNow = new Map<string, KruskalEdge>();
+  for (const round of raw.rounds) {
+    for (const r of round.relaxations) {
+      if (!r.improved) continue;
+      treeNow.set(r.to, r.edge);
+      let cost = 0;
+      for (const e of treeNow.values()) cost += e.weight;
+      steps.push({
+        stepNumber: steps.length + 1,
+        linkId: idOf(r.edge),
+        decision: "accepted",
+        acceptedLinkIds: [...treeNow.values()].map(idOf),
+        totalCost: cost,
+        explanation: r.explanation,
+      });
+    }
+  }
+
+  return finish(
+    "bellmanFord",
+    routers,
+    raw.shortestPathEdges.map(idOf),
+    raw.treeCost,
+    steps,
+    {
+      startNodeId: source,
+      routing: { sourceId: source, distances: raw.distances, predecessors: raw.predecessors },
+    }
   );
 }
 
@@ -138,7 +243,9 @@ export const ALGORITHMS: Record<AlgorithmId, AlgorithmDefinition> = {
     description:
       "Crece el árbol desde un switch inicial, eligiendo siempre el enlace más barato que sale del árbol.",
     complexity: "O(E log V)",
+    layer: "layer2",
     needsStartNode: true,
+    startNodeLabel: "Switch inicial",
     run: runPrim,
     prepareBenchmark: (network, options = {}) => {
       const startNode = resolveStartNode(network, options.startNodeId);
@@ -154,9 +261,11 @@ export const ALGORITHMS: Record<AlgorithmId, AlgorithmDefinition> = {
     id: "kruskal",
     name: "Kruskal",
     description:
-      "Ordena los enlaces por costo y acepta solo los que no forman ciclos.",
+      "Ordena los enlaces por costo y acepta solo los que no forman ciclos (usa Union-Find).",
     complexity: "O(E log E)",
+    layer: "layer2",
     needsStartNode: false,
+    startNodeLabel: "",
     run: runKruskal,
     prepareBenchmark: (network) => {
       const { graph } = buildGraph(network);
@@ -166,12 +275,68 @@ export const ALGORITHMS: Record<AlgorithmId, AlgorithmDefinition> = {
       };
     },
   },
+  dijkstra: {
+    id: "dijkstra",
+    name: "Dijkstra",
+    description:
+      "Calcula la ruta más corta desde un router de origen hasta todos los demás (como hace OSPF con el estado de enlace).",
+    complexity: "O((V + E) log V)",
+    layer: "layer3",
+    needsStartNode: true,
+    startNodeLabel: "Router de origen",
+    run: runDijkstra,
+    prepareBenchmark: (network, options = {}) => {
+      const routers = networkForLayer(network, "layer3");
+      const source = resolveStartNode(routers, options.startNodeId);
+      const { graph } = buildGraph(routers);
+      return () => {
+        if (source === undefined) return { totalCost: 0, selectedLinks: 0 };
+        const r = executeDijkstra({ graph, sourceNode: source }, { recordSteps: false });
+        return {
+          totalCost: r.treeCost,
+          selectedLinks: r.shortestPathEdges.length,
+          distanceSum: sumOfDistances(r.distances),
+        };
+      };
+    },
+  },
+  bellmanFord: {
+    id: "bellmanFord",
+    name: "Bellman-Ford",
+    description:
+      "Mejora las distancias por rondas, revisando todos los enlaces hasta que nada cambia (como el vector de distancias de RIP).",
+    complexity: "O(V · E)",
+    layer: "layer3",
+    needsStartNode: true,
+    startNodeLabel: "Router de origen",
+    run: runBellmanFord,
+    prepareBenchmark: (network, options = {}) => {
+      const routers = networkForLayer(network, "layer3");
+      const source = resolveStartNode(routers, options.startNodeId);
+      const { graph } = buildGraph(routers);
+      return () => {
+        if (source === undefined) return { totalCost: 0, selectedLinks: 0 };
+        const r = executeBellmanFord({ graph, sourceNode: source }, { recordSteps: false });
+        return {
+          totalCost: r.treeCost,
+          selectedLinks: r.shortestPathEdges.length,
+          distanceSum: sumOfDistances(r.distances),
+        };
+      };
+    },
+  },
 };
 
 export const ALGORITHM_LIST: AlgorithmDefinition[] = [
   ALGORITHMS.prim,
   ALGORITHMS.kruskal,
+  ALGORITHMS.dijkstra,
+  ALGORITHMS.bellmanFord,
 ];
+
+export function getAlgorithmsForMode(mode: AnalysisMode): AlgorithmDefinition[] {
+  return ALGORITHM_LIST.filter((a) => a.layer === mode);
+}
 
 export function runAlgorithm(
   id: AlgorithmId,
